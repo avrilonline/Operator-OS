@@ -1,0 +1,34 @@
+services:
+  # ─────────────────────────────────────────────
+  # Operator Agent (one-shot query)
+  #   docker compose -f docker/docker-compose.yml run --rm operator-agent -m "Hello"
+  # ─────────────────────────────────────────────
+  operator-agent:
+    image: docker.io/standardws/operator:latest
+    container_name: operator-agent
+    profiles:
+      - agent
+    # Uncomment to access host network; leave commented unless needed.
+    #extra_hosts:
+    #  - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data:/root/.operator
+    entrypoint: ["operator", "agent"]
+    stdin_open: true
+    tty: true
+
+  # ─────────────────────────────────────────────
+  # Operator Gateway (Long-running Bot)
+  #   docker compose -f docker/docker-compose.yml up operator-gateway
+  # ─────────────────────────────────────────────
+  operator-gateway:
+    image: docker.io/standardws/operator:latest
+    container_name: operator-gateway
+    restart: on-failure
+    profiles:
+      - gateway
+    # Uncomment to access host network; leave commented unless needed.
+    #extra_hosts:
+    #  - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data:/root/.operator

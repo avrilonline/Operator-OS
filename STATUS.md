@@ -1,7 +1,7 @@
 # Operator OS — Production Readiness Status
 
 **Last Updated:** 2026-03-06
-**Current Phase:** 1 — Foundation
+**Current Phase:** 2 — User Management
 **Overall Progress:** 0%
 
 ---
@@ -10,8 +10,8 @@
 
 | # | Phase | Status | Target | Progress |
 |---|---|---|---|---|
-| 1 | Foundation (SQLite, logging, metrics, encryption) | 🟡 In Progress | Weeks 1–4 | 88% |
-| 2 | User Management (accounts, tenancy, auth) | ⬜ Not Started | Weeks 5–8 | 0% |
+| 1 | Foundation (SQLite, logging, metrics, encryption) | ✅ Done | Weeks 1–4 | 100% |
+| 2 | User Management (accounts, tenancy, auth) | 🟡 In Progress | Weeks 5–8 | 0% |
 | 3 | Billing & Plans (Stripe, metering) | ⬜ Not Started | Weeks 9–12 | 0% |
 | 4 | Service Integrations (OAuth, vault, marketplace) | ⬜ Not Started | Weeks 13–16 | 0% |
 | 5 | Scaling & Reliability (PostgreSQL, NATS, K8s) | ⬜ Not Started | Weeks 17–20 | 0% |
@@ -32,19 +32,20 @@
 | F5 | Add OpenTelemetry metrics | P1 | ✅ Done | Cosmo | Prometheus endpoint at `/metrics` via `prometheus/client_golang`. New `pkg/metrics` package with 11 collectors: LLM request duration/tokens/errors, sessions active/messages, bus messages/queue depth, tool execution duration/count, uptime, info. Convenience helpers (`RecordLLMRequest`, `RecordToolExecution`, `RecordBusMessage`). Instrumented `tools.ToolRegistry.ExecuteWithContext` and `bus.MessageBus.Publish*`. Registered on health server mux. `metrics.Init()` called at gateway startup. 11 tests pass. |
 | F6 | Add session TTL and eviction | P1 | ✅ Done | Cosmo | `EvictableStore` interface extends `SessionStore` with `SessionCount`, `DeleteSession`, `EvictExpired`, `EvictLRU`. `SQLiteStore` implements all four. `Evictor` runs periodic background sweeps (TTL then LRU). `DefaultEvictorConfig()`: 24h TTL, 10K max sessions, 5min interval. 14 new tests pass. |
 | F7 | Add automated SQLite backup | P1 | ✅ Done | Cosmo | New `pkg/backup` package. `VacuumInto()` for atomic snapshots. `Scheduler` with configurable interval, retention (MaxBackups), and auto-pruning. `ListBackups()` utility. 14 tests pass. |
-| F8 | Database migration framework | P1 | ⬜ TODO | — | Embedded SQL migrations with version tracking. Auto-run on startup. |
+| F8 | Database migration framework | P1 | ✅ Done | Cosmo | New `pkg/dbmigrate` package. Embedded SQL migrations with version tracking in `schema_migrations` table. `Migrator` loads `.sql` files from `embed.FS`, runs pending migrations in version-ordered transactions, skips already-applied. `AutoMigrate(db)` convenience for startup. 3 built-in migrations (sessions, state, credentials). `NewFromList()` for programmatic use. 17 tests pass. |
 
 ### Definition of Done — Phase 1
-- [ ] All session data persists in SQLite (not JSON files)
-- [ ] All state data persists in SQLite
+- [x] All session data persists in SQLite (not JSON files)
+- [x] All state data persists in SQLite
 - [x] Credentials encrypted at rest
 - [x] Structured JSON logging with correlation IDs
 - [x] Prometheus metrics endpoint functional
 - [x] Session eviction prevents unbounded memory growth
 - [x] Automated backup runs on schedule
-- [ ] All existing tests pass
-- [ ] New tests cover SQLite stores (≥80% coverage for new code)
-- [ ] `make test` passes clean
+- [x] Database migration framework with version tracking
+- [x] All existing tests pass
+- [x] New tests cover SQLite stores (≥80% coverage for new code)
+- [x] `make test` passes clean
 
 ---
 
@@ -131,6 +132,7 @@
 
 | Date | Change |
 |---|---|
+| 2026-03-06 | F8 complete: Database migration framework. New `pkg/dbmigrate` package with embedded SQL migrations, `schema_migrations` version tracking table, transactional per-migration execution, idempotent `Up()`, `AutoMigrate()` convenience. 3 built-in migrations consolidating existing schemas (sessions, state, credentials). `Migrator` supports both `embed.FS` and programmatic `NewFromList()`. 17 new tests covering: nil DB, bad dir, duplicates, full apply, idempotency, incremental, applied/pending/version queries, failed migration rollback, non-SQL file filtering, embedded migrations, FK-dependent ordering. **Phase 1 complete.** |
 | 2026-03-06 | F7 complete: Automated SQLite backup. New `pkg/backup` package with `VacuumInto()` for atomic snapshots using SQLite's VACUUM INTO. `Scheduler` struct runs periodic backups with configurable interval (default 6h), retention limit (default 7), and automatic pruning of oldest backups. `ListBackups()` lists existing backups sorted chronologically. `Config` struct with `DefaultConfig()`. 14 new tests covering: VacuumInto success/failure, scheduler validation, directory creation, RunOnce, Start/Stop lifecycle, prune logic (over/under limit, non-DB file filtering), list sorting, multiple backups with pruning, backup content verification. |
 | 2026-03-06 | F6 complete: Session TTL and eviction. New `EvictableStore` interface with `SessionCount`, `DeleteSession`, `EvictExpired(ttl)`, `EvictLRU(maxSessions)`. SQLiteStore implements all methods (CASCADE deletes for messages). `Evictor` struct runs background goroutine with configurable interval; `RunOnce()` for manual sweeps. `DefaultEvictorConfig()`: 24h TTL, 10K max sessions, 5min sweep. 14 new tests covering: count, delete, TTL eviction, LRU eviction, combined TTL+LRU, no-op cases, start/stop lifecycle, default config. |
 | 2026-03-06 | F5 complete: Prometheus metrics endpoint. New `pkg/metrics` package with `prometheus/client_golang`. 11 collectors: LLM (request_duration_seconds histogram, tokens_total counter, errors_total counter), Sessions (active gauge, messages_total counter), Bus (messages_total counter, queue_depth gauge), Tools (execution_duration_seconds histogram, executions_total counter), System (uptime_seconds gauge, info gauge). Instrumented ToolRegistry.ExecuteWithContext and MessageBus.Publish*. Registered `/metrics` on health server. 11 new tests. |

@@ -21,6 +21,7 @@ import (
 	"github.com/standardws/operator/cmd/operator/internal/onboard"
 	"github.com/standardws/operator/cmd/operator/internal/skills"
 	"github.com/standardws/operator/cmd/operator/internal/status"
+	"github.com/standardws/operator/cmd/operator/internal/svcctl"
 	"github.com/standardws/operator/cmd/operator/internal/version"
 )
 
@@ -42,6 +43,7 @@ func NewPicoclawCommand() *cobra.Command {
 		cron.NewCronCommand(),
 		migrate.NewMigrateCommand(),
 		skills.NewSkillsCommand(),
+		svcctl.NewServicesCommand(),
 		version.NewVersionCommand(),
 	)
 

@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/standardws/operator/pkg/logger"
+	"github.com/standardws/operator/pkg/metrics"
 )
 
 // ErrBusClosed is returned when publishing to a closed MessageBus.
@@ -39,6 +40,7 @@ func (mb *MessageBus) PublishInbound(ctx context.Context, msg InboundMessage) er
 	}
 	select {
 	case mb.inbound <- msg:
+		metrics.RecordBusMessage("inbound")
 		return nil
 	case <-mb.done:
 		return ErrBusClosed
@@ -67,6 +69,7 @@ func (mb *MessageBus) PublishOutbound(ctx context.Context, msg OutboundMessage) 
 	}
 	select {
 	case mb.outbound <- msg:
+		metrics.RecordBusMessage("outbound")
 		return nil
 	case <-mb.done:
 		return ErrBusClosed
@@ -95,6 +98,7 @@ func (mb *MessageBus) PublishOutboundMedia(ctx context.Context, msg OutboundMedi
 	}
 	select {
 	case mb.outboundMedia <- msg:
+		metrics.RecordBusMessage("outbound")
 		return nil
 	case <-mb.done:
 		return ErrBusClosed

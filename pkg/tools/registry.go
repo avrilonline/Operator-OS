@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/standardws/operator/pkg/logger"
+	"github.com/standardws/operator/pkg/metrics"
 	"github.com/standardws/operator/pkg/providers"
 )
 
@@ -86,6 +87,15 @@ func (r *ToolRegistry) ExecuteWithContext(
 	start := time.Now()
 	result := tool.Execute(ctx, args)
 	duration := time.Since(start)
+
+	// Record metrics
+	metricStatus := "ok"
+	if result.IsError {
+		metricStatus = "error"
+	} else if result.Async {
+		metricStatus = "async"
+	}
+	metrics.RecordToolExecution(name, metricStatus, duration.Seconds())
 
 	// Log based on result type
 	if result.IsError {

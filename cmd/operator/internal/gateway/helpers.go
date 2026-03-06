@@ -31,6 +31,7 @@ import (
 	"github.com/standardws/operator/pkg/devices"
 	"github.com/standardws/operator/pkg/health"
 	"github.com/standardws/operator/pkg/heartbeat"
+	"github.com/standardws/operator/pkg/metrics"
 	"github.com/standardws/operator/pkg/logger"
 	"github.com/standardws/operator/pkg/media"
 	"github.com/standardws/operator/pkg/providers"
@@ -169,7 +170,8 @@ func gatewayCmd(debug bool) error {
 		fmt.Println("✓ Device event service started")
 	}
 
-	// Setup shared HTTP server with health endpoints and webhook handlers
+	// Initialize Prometheus metrics and setup shared HTTP server
+	metrics.Init(internal.GetVersion())
 	healthServer := health.NewServer(cfg.Gateway.Host, cfg.Gateway.Port)
 	addr := fmt.Sprintf("%s:%d", cfg.Gateway.Host, cfg.Gateway.Port)
 	channelManager.SetupHTTPServer(addr, healthServer)
@@ -179,7 +181,7 @@ func gatewayCmd(debug bool) error {
 		return err
 	}
 
-	fmt.Printf("✓ Health endpoints available at http://%s:%d/health and /ready\n", cfg.Gateway.Host, cfg.Gateway.Port)
+	fmt.Printf("✓ Health endpoints available at http://%s:%d/health, /ready, and /metrics\n", cfg.Gateway.Host, cfg.Gateway.Port)
 
 	go agentLoop.Run(ctx)
 

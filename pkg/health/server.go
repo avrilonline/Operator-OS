@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/standardws/operator/pkg/metrics"
 )
 
 type Server struct {
@@ -41,6 +43,7 @@ func NewServer(host string, port int) *Server {
 
 	mux.HandleFunc("/health", s.healthHandler)
 	mux.HandleFunc("/ready", s.readyHandler)
+	mux.Handle("/metrics", metrics.Handler())
 
 	addr := fmt.Sprintf("%s:%d", host, port)
 	s.server = &http.Server{
@@ -160,6 +163,7 @@ func (s *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) RegisterOnMux(mux *http.ServeMux) {
 	mux.HandleFunc("/health", s.healthHandler)
 	mux.HandleFunc("/ready", s.readyHandler)
+	mux.Handle("/metrics", metrics.Handler())
 }
 
 func statusString(ok bool) string {

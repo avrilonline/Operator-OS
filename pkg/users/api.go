@@ -10,8 +10,9 @@ import (
 
 // API provides HTTP handlers for user management endpoints.
 type API struct {
-	store        UserStore
-	tokenService *TokenService
+	store             UserStore
+	tokenService      *TokenService
+	verificationStore VerificationStore
 }
 
 // NewAPI creates a new API with the given UserStore.
@@ -25,11 +26,19 @@ func NewAPIWithAuth(store UserStore, ts *TokenService) *API {
 	return &API{store: store, tokenService: ts}
 }
 
+// NewAPIFull creates a new API with all services: UserStore, TokenService,
+// and VerificationStore for email verification endpoints.
+func NewAPIFull(store UserStore, ts *TokenService, vs VerificationStore) *API {
+	return &API{store: store, tokenService: ts, verificationStore: vs}
+}
+
 // RegisterRoutes registers user management endpoints on the given ServeMux.
 func (a *API) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/auth/register", a.handleRegister)
 	mux.HandleFunc("POST /api/v1/auth/login", a.handleLogin)
 	mux.HandleFunc("POST /api/v1/auth/refresh", a.handleRefresh)
+	mux.HandleFunc("POST /api/v1/auth/verify-email", a.handleVerifyEmail)
+	mux.HandleFunc("POST /api/v1/auth/resend-verification", a.handleResendVerification)
 }
 
 // RegisterRequest is the JSON body for user registration.
@@ -74,6 +83,28 @@ type RefreshResponse struct {
 	RefreshToken string `json:"refresh_token"`
 	TokenType    string `json:"token_type"`
 	ExpiresIn    int64  `json:"expires_in"`
+}
+
+// VerifyEmailRequest is the JSON body for email verification.
+type VerifyEmailRequest struct {
+	Token string `json:"token"`
+}
+
+// VerifyEmailResponse is the JSON response after successful verification.
+type VerifyEmailResponse struct {
+	Message       string `json:"message"`
+	EmailVerified bool   `json:"email_verified"`
+	Status        string `json:"status"`
+}
+
+// ResendVerificationRequest is the JSON body for resending verification.
+type ResendVerificationRequest struct {
+	Email string `json:"email"`
+}
+
+// ResendVerificationResponse is the JSON response after resending verification.
+type ResendVerificationResponse struct {
+	Message string `json:"message"`
 }
 
 // ErrorResponse is a standard error JSON response.
@@ -267,6 +298,108 @@ func (a *API) handleRefresh(w http.ResponseWriter, r *http.Request) {
 		RefreshToken: pair.RefreshToken,
 		TokenType:    pair.TokenType,
 		ExpiresIn:    pair.ExpiresIn,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (a *API) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
+	if a.verificationStore == nil {
+		writeError(w, http.StatusInternalServerError, "verification_not_configured", "Email verification is not configured")
+		return
+	}
+
+	var req VerifyEmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid request body")
+		return
+	}
+
+	req.Token = sanitizeToken(req.Token)
+	if req.Token == "" {
+		writeError(w, http.StatusBadRequest, "missing_token", "Verification token is required")
+		return
+	}
+
+	if err := VerifyEmail(req.Token, a.verificationStore, a.store); err != nil {
+		switch {
+		case errors.Is(err, ErrTokenNotFound):
+			writeError(w, http.StatusNotFound, "token_not_found", "Verification token not found")
+		case errors.Is(err, ErrTokenExpired):
+			writeError(w, http.StatusGone, "token_expired", "Verification token has expired")
+		case errors.Is(err, ErrTokenUsed):
+			writeError(w, http.StatusConflict, "token_used", "Verification token has already been used")
+		case errors.Is(err, ErrAlreadyVerified):
+			writeError(w, http.StatusConflict, "already_verified", "Email is already verified")
+		default:
+			writeError(w, http.StatusInternalServerError, "internal", "Verification failed")
+		}
+		return
+	}
+
+	resp := VerifyEmailResponse{
+		Message:       "Email verified successfully",
+		EmailVerified: true,
+		Status:        StatusActive,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (a *API) handleResendVerification(w http.ResponseWriter, r *http.Request) {
+	if a.verificationStore == nil {
+		writeError(w, http.StatusInternalServerError, "verification_not_configured", "Email verification is not configured")
+		return
+	}
+
+	var req ResendVerificationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_json", "Invalid request body")
+		return
+	}
+
+	req.Email = strings.TrimSpace(req.Email)
+	if req.Email == "" {
+		writeError(w, http.StatusBadRequest, "missing_email", "Email is required")
+		return
+	}
+
+	// Look up user by email. Use vague error for non-existent users to prevent enumeration.
+	user, err := a.store.GetByEmail(strings.ToLower(req.Email))
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			// Return success even if user doesn't exist (anti-enumeration).
+			resp := ResendVerificationResponse{Message: "If an account with that email exists, a verification email has been sent"}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(resp)
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "internal", "Failed to process request")
+		return
+	}
+
+	_, err = ResendVerification(user.ID, a.verificationStore, a.store, DefaultResendCooldown)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrAlreadyVerified):
+			writeError(w, http.StatusConflict, "already_verified", "Email is already verified")
+		case errors.Is(err, ErrTooManyTokens):
+			writeError(w, http.StatusTooManyRequests, "too_many_requests", "Please wait before requesting another verification email")
+		default:
+			writeError(w, http.StatusInternalServerError, "internal", "Failed to send verification")
+		}
+		return
+	}
+
+	// In production, this would trigger an email send.
+	// The token is returned in the response only for development/testing.
+	resp := ResendVerificationResponse{
+		Message: "If an account with that email exists, a verification email has been sent",
 	}
 
 	w.Header().Set("Content-Type", "application/json")

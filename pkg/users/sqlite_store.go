@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS users (
     email           TEXT NOT NULL UNIQUE,
     password_hash   TEXT NOT NULL,
     display_name    TEXT NOT NULL DEFAULT '',
+    role            TEXT NOT NULL DEFAULT 'user',
     status          TEXT NOT NULL DEFAULT 'pending_verification',
     email_verified  INTEGER NOT NULL DEFAULT 0,
     created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
@@ -55,6 +56,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 `
 	_, err := db.Exec(schema)
 	return err
@@ -76,6 +78,9 @@ func (s *SQLiteUserStore) Create(user *User) error {
 	if user.Status == "" {
 		user.Status = StatusPendingVerification
 	}
+	if user.Role == "" {
+		user.Role = RoleUser
+	}
 
 	emailVerified := 0
 	if user.EmailVerified {
@@ -83,12 +88,13 @@ func (s *SQLiteUserStore) Create(user *User) error {
 	}
 
 	_, err := s.db.Exec(
-		`INSERT INTO users (id, email, password_hash, display_name, status, email_verified, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO users (id, email, password_hash, display_name, role, status, email_verified, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		user.ID,
 		strings.ToLower(user.Email),
 		user.PasswordHash,
 		user.DisplayName,
+		user.Role,
 		user.Status,
 		emailVerified,
 		now.Format(time.RFC3339Nano),
@@ -120,7 +126,7 @@ func (s *SQLiteUserStore) GetByEmail(email string) (*User, error) {
 
 func (s *SQLiteUserStore) getBy(column, value string) (*User, error) {
 	query := fmt.Sprintf(
-		`SELECT id, email, password_hash, display_name, status, email_verified, created_at, updated_at
+		`SELECT id, email, password_hash, display_name, role, status, email_verified, created_at, updated_at
 		 FROM users WHERE %s = ?`, column,
 	)
 
@@ -130,7 +136,7 @@ func (s *SQLiteUserStore) getBy(column, value string) (*User, error) {
 
 	err := s.db.QueryRow(query, value).Scan(
 		&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName,
-		&u.Status, &emailVerified, &createdStr, &updatedStr,
+		&u.Role, &u.Status, &emailVerified, &createdStr, &updatedStr,
 	)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
@@ -142,6 +148,9 @@ func (s *SQLiteUserStore) getBy(column, value string) (*User, error) {
 	u.EmailVerified = emailVerified == 1
 	u.CreatedAt, _ = time.Parse(time.RFC3339Nano, createdStr)
 	u.UpdatedAt, _ = time.Parse(time.RFC3339Nano, updatedStr)
+	if u.Role == "" {
+		u.Role = RoleUser
+	}
 
 	return &u, nil
 }
@@ -160,11 +169,12 @@ func (s *SQLiteUserStore) Update(user *User) error {
 
 	res, err := s.db.Exec(
 		`UPDATE users SET email = ?, password_hash = ?, display_name = ?,
-		 status = ?, email_verified = ?, updated_at = ?
+		 role = ?, status = ?, email_verified = ?, updated_at = ?
 		 WHERE id = ?`,
 		strings.ToLower(user.Email),
 		user.PasswordHash,
 		user.DisplayName,
+		user.Role,
 		user.Status,
 		emailVerified,
 		user.UpdatedAt.Format(time.RFC3339Nano),
@@ -203,7 +213,7 @@ func (s *SQLiteUserStore) List() ([]*User, error) {
 	defer s.mu.RUnlock()
 
 	rows, err := s.db.Query(
-		`SELECT id, email, password_hash, display_name, status, email_verified, created_at, updated_at
+		`SELECT id, email, password_hash, display_name, role, status, email_verified, created_at, updated_at
 		 FROM users ORDER BY created_at DESC`,
 	)
 	if err != nil {
@@ -219,7 +229,7 @@ func (s *SQLiteUserStore) List() ([]*User, error) {
 
 		if err := rows.Scan(
 			&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName,
-			&u.Status, &emailVerified, &createdStr, &updatedStr,
+			&u.Role, &u.Status, &emailVerified, &createdStr, &updatedStr,
 		); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}

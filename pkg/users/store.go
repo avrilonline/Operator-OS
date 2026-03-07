@@ -15,6 +15,7 @@ type User struct {
 	Email         string    `json:"email"`
 	PasswordHash  string    `json:"-"` // never serialized
 	DisplayName   string    `json:"display_name,omitempty"`
+	Role          string    `json:"role"`
 	Status        string    `json:"status"`
 	EmailVerified bool      `json:"email_verified"`
 	CreatedAt     time.Time `json:"created_at"`
@@ -27,6 +28,12 @@ const (
 	StatusActive              = "active"
 	StatusSuspended           = "suspended"
 	StatusDeleted             = "deleted"
+)
+
+// User role constants.
+const (
+	RoleUser  = "user"
+	RoleAdmin = "admin"
 )
 
 // UserStore abstracts user persistence.

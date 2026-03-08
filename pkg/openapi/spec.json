@@ -1,0 +1,2369 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Operator OS API",
+    "description": "Operator OS is an ultra-lightweight AI agent framework. This API provides endpoints for user management, agent configuration, billing, integrations, and administration.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Operator OS",
+      "url": "https://github.com/operatoronline/Operator-OS"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:18790",
+      "description": "Local development"
+    },
+    {
+      "url": "https://api.operator.onl",
+      "description": "Production"
+    }
+  ],
+  "tags": [
+    {"name": "Auth", "description": "User registration, login, and token management"},
+    {"name": "Agents", "description": "Per-user agent configuration and management"},
+    {"name": "Billing", "description": "Plans, subscriptions, and usage"},
+    {"name": "Stripe", "description": "Stripe checkout, portal, and webhooks"},
+    {"name": "Usage", "description": "Token usage metering and dashboard"},
+    {"name": "Overage", "description": "Overage enforcement and status"},
+    {"name": "OAuth", "description": "OAuth 2.0 authorization flows"},
+    {"name": "Integrations", "description": "Service integration registry and management"},
+    {"name": "Integration Management", "description": "Connect, disconnect, and manage user integrations"},
+    {"name": "Admin", "description": "Platform administration (admin role required)"},
+    {"name": "Audit", "description": "Audit logging and event queries"},
+    {"name": "GDPR", "description": "GDPR data subject rights (export, erasure, retention)"},
+    {"name": "Rate Limiting", "description": "Per-user rate limit status"},
+    {"name": "Health", "description": "Health checks and monitoring"},
+    {"name": "Docs", "description": "API documentation"}
+  ],
+  "security": [
+    {"bearerAuth": []}
+  ],
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register a new user",
+        "operationId": "registerUser",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/RegisterRequest"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/RegisterResponse"}
+              }
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "409": {
+            "description": "Email already registered",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Error"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Authenticate and obtain tokens",
+        "operationId": "loginUser",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/LoginRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/LoginResponse"}
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Error"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Refresh access token",
+        "operationId": "refreshToken",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/RefreshRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens refreshed",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/LoginResponse"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/auth/verify-email": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Verify email address",
+        "operationId": "verifyEmail",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token"],
+                "properties": {
+                  "token": {"type": "string", "description": "Email verification token"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Email verified"},
+          "404": {"description": "Token not found"},
+          "409": {"description": "Token already used or email already verified"},
+          "410": {"description": "Token expired"}
+        }
+      }
+    },
+    "/api/v1/auth/resend-verification": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Resend email verification",
+        "operationId": "resendVerification",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": {"type": "string", "format": "email"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Verification email sent (returns 200 even for nonexistent emails for anti-enumeration)"},
+          "409": {"description": "Email already verified"},
+          "429": {"description": "Cooldown period not elapsed"}
+        }
+      }
+    },
+    "/api/v1/agents": {
+      "get": {
+        "tags": ["Agents"],
+        "summary": "List user's agents",
+        "operationId": "listAgents",
+        "responses": {
+          "200": {
+            "description": "Agent list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agents": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/AgentResponse"}
+                    },
+                    "count": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      },
+      "post": {
+        "tags": ["Agents"],
+        "summary": "Create a new agent",
+        "operationId": "createAgent",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/CreateAgentRequest"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Agent created",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/AgentResponse"}
+              }
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "409": {"description": "Agent name already exists"}
+        }
+      }
+    },
+    "/api/v1/agents/{id}": {
+      "get": {
+        "tags": ["Agents"],
+        "summary": "Get agent by ID",
+        "operationId": "getAgent",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent details",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/AgentResponse"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      },
+      "put": {
+        "tags": ["Agents"],
+        "summary": "Update an agent",
+        "operationId": "updateAgent",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/UpdateAgentRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agent updated",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/AgentResponse"}
+              }
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      },
+      "delete": {
+        "tags": ["Agents"],
+        "summary": "Delete an agent",
+        "operationId": "deleteAgent",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "204": {"description": "Agent deleted"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/v1/agents/{id}/default": {
+      "post": {
+        "tags": ["Agents"],
+        "summary": "Set agent as default",
+        "operationId": "setDefaultAgent",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {"description": "Default agent set"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/v1/billing/plans": {
+      "get": {
+        "tags": ["Billing"],
+        "summary": "List available plans",
+        "operationId": "listPlans",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Plan list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plans": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/Plan"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/billing/plans/{id}": {
+      "get": {
+        "tags": ["Billing"],
+        "summary": "Get plan by ID",
+        "operationId": "getPlan",
+        "security": [],
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Plan details",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Plan"}
+              }
+            }
+          },
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/v1/billing/checkout": {
+      "post": {
+        "tags": ["Stripe"],
+        "summary": "Create Stripe checkout session",
+        "operationId": "createCheckout",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/CheckoutRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Checkout session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "checkout_url": {"type": "string", "format": "uri"}
+                  }
+                }
+              }
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/billing/portal": {
+      "post": {
+        "tags": ["Stripe"],
+        "summary": "Create Stripe billing portal session",
+        "operationId": "createPortal",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["return_url"],
+                "properties": {
+                  "return_url": {"type": "string", "format": "uri"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Portal session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "portal_url": {"type": "string", "format": "uri"}
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/billing/subscription": {
+      "get": {
+        "tags": ["Stripe"],
+        "summary": "Get current subscription",
+        "operationId": "getSubscription",
+        "responses": {
+          "200": {
+            "description": "Current subscription (or free plan default)",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/SubscriptionResponse"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/billing/webhook": {
+      "post": {
+        "tags": ["Stripe"],
+        "summary": "Stripe webhook endpoint",
+        "operationId": "stripeWebhook",
+        "security": [],
+        "description": "Receives Stripe webhook events. Verifies signature using Stripe-Signature header.",
+        "parameters": [
+          {
+            "name": "Stripe-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {"type": "string"},
+            "description": "Stripe webhook signature for HMAC-SHA256 verification"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Raw Stripe event payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Event processed"},
+          "400": {"description": "Invalid signature or payload"}
+        }
+      }
+    },
+    "/api/v1/billing/change-plan": {
+      "post": {
+        "tags": ["Billing"],
+        "summary": "Change subscription plan",
+        "operationId": "changePlan",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/PlanChangeRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan changed",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/PlanChangeResult"}
+              }
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "409": {"description": "Already on the requested plan"}
+        }
+      }
+    },
+    "/api/v1/billing/preview-change": {
+      "post": {
+        "tags": ["Billing"],
+        "summary": "Preview plan change (no mutation)",
+        "operationId": "previewPlanChange",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/PlanChangeRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preview result",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/PlanChangeResult"}
+              }
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/billing/usage": {
+      "get": {
+        "tags": ["Usage"],
+        "summary": "Get usage summary for current billing period",
+        "operationId": "getUsageSummary",
+        "parameters": [
+          {"name": "since", "in": "query", "schema": {"type": "string", "format": "date-time"}, "description": "Start of period (RFC3339)"},
+          {"name": "until", "in": "query", "schema": {"type": "string", "format": "date-time"}, "description": "End of period (RFC3339)"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage summary",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/UsageSummary"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailable"}
+        }
+      }
+    },
+    "/api/v1/billing/usage/daily": {
+      "get": {
+        "tags": ["Usage"],
+        "summary": "Get daily usage breakdown",
+        "operationId": "getDailyUsage",
+        "parameters": [
+          {"name": "days", "in": "query", "schema": {"type": "integer", "default": 30, "maximum": 365}, "description": "Number of days to look back"},
+          {"name": "since", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+          {"name": "until", "in": "query", "schema": {"type": "string", "format": "date-time"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "daily": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/DailyUsage"}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailable"}
+        }
+      }
+    },
+    "/api/v1/billing/usage/models": {
+      "get": {
+        "tags": ["Usage"],
+        "summary": "Get per-model usage breakdown",
+        "operationId": "getModelUsage",
+        "parameters": [
+          {"name": "since", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+          {"name": "until", "in": "query", "schema": {"type": "string", "format": "date-time"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Model usage breakdown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "models": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/ModelUsage"}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailable"}
+        }
+      }
+    },
+    "/api/v1/billing/usage/events": {
+      "get": {
+        "tags": ["Usage"],
+        "summary": "List raw usage events",
+        "operationId": "listUsageEvents",
+        "parameters": [
+          {"name": "model", "in": "query", "schema": {"type": "string"}},
+          {"name": "since", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+          {"name": "until", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 100, "maximum": 1000}},
+          {"name": "offset", "in": "query", "schema": {"type": "integer", "default": 0}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/UsageEvent"}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailable"}
+        }
+      }
+    },
+    "/api/v1/billing/usage/limits": {
+      "get": {
+        "tags": ["Usage"],
+        "summary": "Get current usage vs plan limits",
+        "operationId": "getUsageLimits",
+        "responses": {
+          "200": {
+            "description": "Usage limits",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/UsageLimits"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailable"}
+        }
+      }
+    },
+    "/api/v1/billing/overage": {
+      "get": {
+        "tags": ["Overage"],
+        "summary": "Get overage status",
+        "operationId": "getOverageStatus",
+        "responses": {
+          "200": {
+            "description": "Overage status",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/OverageStatus"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/oauth/providers": {
+      "get": {
+        "tags": ["OAuth"],
+        "summary": "List available OAuth providers",
+        "operationId": "listOAuthProviders",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Provider list (sanitized — no secrets)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "providers": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/OAuthProvider"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/oauth/authorize": {
+      "post": {
+        "tags": ["OAuth"],
+        "summary": "Initiate OAuth authorization flow",
+        "operationId": "oauthAuthorize",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["provider_id"],
+                "properties": {
+                  "provider_id": {"type": "string"},
+                  "scopes": {"type": "array", "items": {"type": "string"}},
+                  "redirect_after": {"type": "string", "format": "uri"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authorization URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "auth_url": {"type": "string", "format": "uri"},
+                    "state": {"type": "string"}
+                  }
+                }
+              }
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/oauth/callback": {
+      "get": {
+        "tags": ["OAuth"],
+        "summary": "OAuth provider callback",
+        "operationId": "oauthCallback",
+        "security": [],
+        "parameters": [
+          {"name": "state", "in": "query", "required": true, "schema": {"type": "string"}},
+          {"name": "code", "in": "query", "required": true, "schema": {"type": "string"}},
+          {"name": "error", "in": "query", "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "OAuth tokens received",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/OAuthTokenResponse"}
+              }
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"}
+        }
+      }
+    },
+    "/api/v1/oauth/refresh": {
+      "post": {
+        "tags": ["OAuth"],
+        "summary": "Refresh OAuth token",
+        "operationId": "oauthRefresh",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["provider_id", "refresh_token"],
+                "properties": {
+                  "provider_id": {"type": "string"},
+                  "refresh_token": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Refreshed tokens",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/OAuthTokenResponse"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/integrations": {
+      "get": {
+        "tags": ["Integrations"],
+        "summary": "List active integrations",
+        "operationId": "listIntegrations",
+        "security": [],
+        "parameters": [
+          {"name": "category", "in": "query", "schema": {"type": "string"}, "description": "Filter by category"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Integration list (sanitized)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "integrations": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/IntegrationSummary"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/categories": {
+      "get": {
+        "tags": ["Integrations"],
+        "summary": "List integration categories",
+        "operationId": "listCategories",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Category list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "categories": {
+                      "type": "array",
+                      "items": {"type": "string"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/{id}": {
+      "get": {
+        "tags": ["Integrations"],
+        "summary": "Get integration by ID",
+        "operationId": "getIntegration",
+        "security": [],
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Integration details",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/IntegrationSummary"}
+              }
+            }
+          },
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/v1/user/integrations": {
+      "get": {
+        "tags": ["Integrations"],
+        "summary": "List user's connected integrations",
+        "operationId": "listUserIntegrations",
+        "parameters": [
+          {"name": "status", "in": "query", "schema": {"type": "string", "enum": ["pending", "active", "failed", "revoked", "disabled"]}}
+        ],
+        "responses": {
+          "200": {
+            "description": "User integration list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "integrations": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/UserIntegration"}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      },
+      "post": {
+        "tags": ["Integrations"],
+        "summary": "Connect a new integration",
+        "operationId": "connectUserIntegration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["integration_id"],
+                "properties": {
+                  "integration_id": {"type": "string"},
+                  "config": {"type": "object", "additionalProperties": {"type": "string"}},
+                  "scopes": {"type": "array", "items": {"type": "string"}}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Integration connected"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"description": "Integration not found"},
+          "409": {"description": "Already connected"}
+        }
+      }
+    },
+    "/api/v1/user/integrations/{id}": {
+      "get": {
+        "tags": ["Integrations"],
+        "summary": "Get user integration by ID",
+        "operationId": "getUserIntegration",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "User integration details",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/UserIntegration"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      },
+      "delete": {
+        "tags": ["Integrations"],
+        "summary": "Disconnect user integration",
+        "operationId": "deleteUserIntegration",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "204": {"description": "Integration disconnected"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/v1/manage/integrations/connect": {
+      "post": {
+        "tags": ["Integration Management"],
+        "summary": "Connect an integration (OAuth, API key, or no-auth)",
+        "operationId": "manageConnect",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/ConnectRequest"}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Connection initiated",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ConnectResponse"}
+              }
+            }
+          },
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "409": {"description": "Already connected"}
+        }
+      }
+    },
+    "/api/v1/manage/integrations/disconnect": {
+      "post": {
+        "tags": ["Integration Management"],
+        "summary": "Disconnect an integration",
+        "operationId": "manageDisconnect",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["integration_id"],
+                "properties": {
+                  "integration_id": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Integration disconnected"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/v1/manage/integrations/status": {
+      "get": {
+        "tags": ["Integration Management"],
+        "summary": "List all user integration statuses with token health",
+        "operationId": "manageListStatus",
+        "parameters": [
+          {"name": "status", "in": "query", "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Integration status list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "integrations": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/IntegrationStatus"}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/manage/integrations/{id}/status": {
+      "get": {
+        "tags": ["Integration Management"],
+        "summary": "Get single integration status",
+        "operationId": "manageGetStatus",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Integration status",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/IntegrationStatus"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/v1/manage/integrations/{id}/enable": {
+      "post": {
+        "tags": ["Integration Management"],
+        "summary": "Re-enable a disabled integration",
+        "operationId": "manageEnable",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {"description": "Integration enabled"},
+          "400": {"description": "Invalid state transition"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/v1/manage/integrations/{id}/disable": {
+      "post": {
+        "tags": ["Integration Management"],
+        "summary": "Disable an integration (preserves tokens)",
+        "operationId": "manageDisable",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {"description": "Integration disabled"},
+          "400": {"description": "Invalid state transition"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/v1/manage/integrations/{id}/reconnect": {
+      "post": {
+        "tags": ["Integration Management"],
+        "summary": "Re-initiate OAuth for failed/revoked integrations",
+        "operationId": "manageReconnect",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scopes": {"type": "array", "items": {"type": "string"}},
+                  "redirect_after": {"type": "string", "format": "uri"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reconnection initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "auth_url": {"type": "string", "format": "uri"}
+                  }
+                }
+              }
+            }
+          },
+          "400": {"description": "Not an OAuth integration or invalid state"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/v1/manage/integrations/{id}/config": {
+      "put": {
+        "tags": ["Integration Management"],
+        "summary": "Update integration configuration",
+        "operationId": "manageUpdateConfig",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["config"],
+                "properties": {
+                  "config": {"type": "object", "additionalProperties": {"type": "string"}}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Config updated"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "List users (admin only)",
+        "operationId": "adminListUsers",
+        "parameters": [
+          {"name": "status", "in": "query", "schema": {"type": "string"}},
+          {"name": "role", "in": "query", "schema": {"type": "string", "enum": ["user", "admin"]}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 50}},
+          {"name": "offset", "in": "query", "schema": {"type": "integer", "default": 0}}
+        ],
+        "responses": {
+          "200": {
+            "description": "User list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/AdminUserResponse"}
+                    },
+                    "count": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"}
+        }
+      }
+    },
+    "/api/v1/admin/users/{id}": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Get user details (admin only)",
+        "operationId": "adminGetUser",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "User details",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/AdminUserResponse"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      },
+      "put": {
+        "tags": ["Admin"],
+        "summary": "Update user (admin only)",
+        "operationId": "adminUpdateUser",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "display_name": {"type": "string"},
+                  "role": {"type": "string", "enum": ["user", "admin"]},
+                  "status": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "User updated"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      },
+      "delete": {
+        "tags": ["Admin"],
+        "summary": "Delete user (admin only)",
+        "operationId": "adminDeleteUser",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "204": {"description": "User deleted"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "409": {"description": "Cannot delete self"}
+        }
+      }
+    },
+    "/api/v1/admin/users/{id}/suspend": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Suspend user (admin only)",
+        "operationId": "adminSuspendUser",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {"description": "User suspended"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "409": {"description": "Cannot suspend self"}
+        }
+      }
+    },
+    "/api/v1/admin/users/{id}/activate": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Activate user (admin only)",
+        "operationId": "adminActivateUser",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {"description": "User activated"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/v1/admin/users/{id}/role": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "Set user role (admin only)",
+        "operationId": "adminSetRole",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["role"],
+                "properties": {
+                  "role": {"type": "string", "enum": ["user", "admin"]}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Role updated"},
+          "400": {"description": "Invalid role"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "409": {"description": "Cannot demote self"}
+        }
+      }
+    },
+    "/api/v1/admin/stats": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Platform statistics (admin only)",
+        "operationId": "adminGetStats",
+        "responses": {
+          "200": {
+            "description": "Platform stats",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/PlatformStats"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"}
+        }
+      }
+    },
+    "/api/v1/admin/audit": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "Query audit log (admin only)",
+        "operationId": "adminQueryAudit",
+        "parameters": [
+          {"name": "user_id", "in": "query", "schema": {"type": "string"}},
+          {"name": "action", "in": "query", "schema": {"type": "string"}, "description": "Exact match or category prefix (e.g. 'auth.')"},
+          {"name": "resource", "in": "query", "schema": {"type": "string"}},
+          {"name": "status", "in": "query", "schema": {"type": "string"}},
+          {"name": "since", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+          {"name": "until", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 50, "maximum": 1000}},
+          {"name": "offset", "in": "query", "schema": {"type": "integer", "default": 0}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/AuditEvent"}
+                    },
+                    "count": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"}
+        }
+      }
+    },
+    "/api/v1/audit/events": {
+      "get": {
+        "tags": ["Audit"],
+        "summary": "List audit events",
+        "operationId": "listAuditEvents",
+        "parameters": [
+          {"name": "action", "in": "query", "schema": {"type": "string"}},
+          {"name": "resource", "in": "query", "schema": {"type": "string"}},
+          {"name": "since", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+          {"name": "until", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 50}},
+          {"name": "offset", "in": "query", "schema": {"type": "integer", "default": 0}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/AuditEvent"}
+                    },
+                    "count": {"type": "integer"},
+                    "limit": {"type": "integer"},
+                    "offset": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/audit/events/count": {
+      "get": {
+        "tags": ["Audit"],
+        "summary": "Count audit events",
+        "operationId": "countAuditEvents",
+        "parameters": [
+          {"name": "action", "in": "query", "schema": {"type": "string"}},
+          {"name": "resource", "in": "query", "schema": {"type": "string"}},
+          {"name": "since", "in": "query", "schema": {"type": "string", "format": "date-time"}},
+          {"name": "until", "in": "query", "schema": {"type": "string", "format": "date-time"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Event count",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/api/v1/gdpr/export": {
+      "post": {
+        "tags": ["GDPR"],
+        "summary": "Request data export",
+        "operationId": "gdprExport",
+        "responses": {
+          "200": {
+            "description": "Export request created",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/DataSubjectRequest"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailable"}
+        }
+      }
+    },
+    "/api/v1/gdpr/erase": {
+      "post": {
+        "tags": ["GDPR"],
+        "summary": "Request data erasure",
+        "operationId": "gdprErase",
+        "description": "Irreversible. Requires confirm:true in request body.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["confirm"],
+                "properties": {
+                  "confirm": {"type": "boolean", "description": "Must be true to proceed"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erasure request created",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/DataSubjectRequest"}
+              }
+            }
+          },
+          "400": {"description": "confirm must be true"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailable"}
+        }
+      }
+    },
+    "/api/v1/gdpr/requests": {
+      "get": {
+        "tags": ["GDPR"],
+        "summary": "List user's data subject requests",
+        "operationId": "gdprListRequests",
+        "responses": {
+          "200": {
+            "description": "DSR list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "requests": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/DataSubjectRequest"}
+                    },
+                    "count": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailable"}
+        }
+      }
+    },
+    "/api/v1/gdpr/requests/{id}": {
+      "get": {
+        "tags": ["GDPR"],
+        "summary": "Get data subject request by ID",
+        "operationId": "gdprGetRequest",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "DSR details",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/DataSubjectRequest"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      },
+      "delete": {
+        "tags": ["GDPR"],
+        "summary": "Cancel a pending data subject request",
+        "operationId": "gdprCancelRequest",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {"description": "Request canceled"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "409": {"description": "Request already processed"}
+        }
+      }
+    },
+    "/api/v1/gdpr/retention": {
+      "get": {
+        "tags": ["GDPR"],
+        "summary": "Get current data retention policy",
+        "operationId": "gdprGetRetention",
+        "responses": {
+          "200": {
+            "description": "Retention policy",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/RetentionPolicy"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "503": {"$ref": "#/components/responses/ServiceUnavailable"}
+        }
+      }
+    },
+    "/api/v1/rate-limit/status": {
+      "get": {
+        "tags": ["Rate Limiting"],
+        "summary": "Get rate limit status",
+        "operationId": "getRateLimitStatus",
+        "responses": {
+          "200": {
+            "description": "Rate limit status",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/RateLimitStatus"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/health/live": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Liveness probe",
+        "operationId": "healthLive",
+        "security": [],
+        "description": "Always returns 200. Used by Kubernetes liveness probes.",
+        "responses": {
+          "200": {
+            "description": "Alive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "example": "alive"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Readiness probe",
+        "operationId": "healthReady",
+        "security": [],
+        "description": "Returns 200 if all critical components are healthy, 503 otherwise.",
+        "responses": {
+          "200": {
+            "description": "Ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "example": "ready"}
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Not ready — critical components unhealthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {"type": "string", "example": "not_ready"},
+                    "failed": {"type": "array", "items": {"type": "string"}}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/detailed": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Detailed health report",
+        "operationId": "healthDetailed",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Detailed health report",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/DetailedHealthResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/component/{name}": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Single component health check",
+        "operationId": "healthComponent",
+        "security": [],
+        "parameters": [
+          {"name": "name", "in": "path", "required": true, "schema": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Component healthy",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ComponentHealth"}
+              }
+            }
+          },
+          "404": {"description": "Component not found"},
+          "503": {"description": "Component unhealthy"}
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Prometheus metrics",
+        "operationId": "getMetrics",
+        "security": [],
+        "description": "Prometheus-format metrics endpoint.",
+        "responses": {
+          "200": {
+            "description": "Metrics in Prometheus exposition format",
+            "content": {
+              "text/plain": {
+                "schema": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/docs/openapi.json": {
+      "get": {
+        "tags": ["Docs"],
+        "summary": "OpenAPI specification",
+        "operationId": "getOpenAPISpec",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 specification",
+            "content": {
+              "application/json": {
+                "schema": {"type": "object"}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token from /api/v1/auth/login"
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"}
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication required",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"}
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Insufficient permissions (admin role required)",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"}
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"}
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Service not configured",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/Error"}
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {"type": "string"},
+          "code": {"type": "string"},
+          "message": {"type": "string"}
+        },
+        "required": ["error"]
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {"type": "string", "format": "email"},
+          "password": {"type": "string", "minLength": 8},
+          "display_name": {"type": "string"}
+        }
+      },
+      "RegisterResponse": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "email": {"type": "string", "format": "email"},
+          "display_name": {"type": "string"},
+          "status": {"type": "string", "enum": ["pending_verification", "active", "suspended", "deleted"]},
+          "email_verified": {"type": "boolean"}
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {"type": "string", "format": "email"},
+          "password": {"type": "string"}
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "access_token": {"type": "string"},
+          "refresh_token": {"type": "string"},
+          "token_type": {"type": "string", "example": "Bearer"},
+          "expires_in": {"type": "integer", "description": "Access token expiry in seconds"},
+          "user": {"$ref": "#/components/schemas/RegisterResponse"}
+        }
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "required": ["refresh_token"],
+        "properties": {
+          "refresh_token": {"type": "string"}
+        }
+      },
+      "AgentResponse": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "description": {"type": "string"},
+          "system_prompt": {"type": "string"},
+          "model": {"type": "string"},
+          "model_fallbacks": {"type": "array", "items": {"type": "string"}},
+          "tools": {"type": "array", "items": {"type": "string"}},
+          "skills": {"type": "array", "items": {"type": "string"}},
+          "max_tokens": {"type": "integer"},
+          "temperature": {"type": "number", "format": "float"},
+          "max_iterations": {"type": "integer"},
+          "is_default": {"type": "boolean"},
+          "status": {"type": "string", "enum": ["active", "archived"]},
+          "allowed_integrations": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/AgentIntegrationScope"}
+          },
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "CreateAgentRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string", "maxLength": 100},
+          "description": {"type": "string"},
+          "system_prompt": {"type": "string", "maxLength": 50000},
+          "model": {"type": "string"},
+          "model_fallbacks": {"type": "array", "items": {"type": "string"}},
+          "tools": {"type": "array", "items": {"type": "string"}},
+          "skills": {"type": "array", "items": {"type": "string"}},
+          "max_tokens": {"type": "integer"},
+          "temperature": {"type": "number", "format": "float"},
+          "max_iterations": {"type": "integer"},
+          "is_default": {"type": "boolean"},
+          "allowed_integrations": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/AgentIntegrationScope"}
+          }
+        }
+      },
+      "UpdateAgentRequest": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "description": {"type": "string"},
+          "system_prompt": {"type": "string"},
+          "model": {"type": "string"},
+          "model_fallbacks": {"type": "array", "items": {"type": "string"}},
+          "tools": {"type": "array", "items": {"type": "string"}},
+          "skills": {"type": "array", "items": {"type": "string"}},
+          "max_tokens": {"type": "integer"},
+          "temperature": {"type": "number", "format": "float"},
+          "max_iterations": {"type": "integer"},
+          "status": {"type": "string", "enum": ["active", "archived"]},
+          "allowed_integrations": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/AgentIntegrationScope"}
+          }
+        }
+      },
+      "AgentIntegrationScope": {
+        "type": "object",
+        "required": ["integration_id"],
+        "properties": {
+          "integration_id": {"type": "string"},
+          "allowed_tools": {"type": "array", "items": {"type": "string"}},
+          "allowed_scopes": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "Plan": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "enum": ["free", "starter", "pro", "enterprise"]},
+          "name": {"type": "string"},
+          "price_monthly_cents": {"type": "integer"},
+          "price_yearly_cents": {"type": "integer"},
+          "active": {"type": "boolean"},
+          "limits": {"$ref": "#/components/schemas/PlanLimits"}
+        }
+      },
+      "PlanLimits": {
+        "type": "object",
+        "properties": {
+          "max_agents": {"type": "integer"},
+          "max_messages_per_month": {"type": "integer", "description": "0 = unlimited"},
+          "max_tokens_per_month": {"type": "integer", "description": "0 = unlimited"},
+          "max_integrations": {"type": "integer"},
+          "max_storage_mb": {"type": "integer"},
+          "max_team_members": {"type": "integer"},
+          "allowed_models": {"type": "array", "items": {"type": "string"}},
+          "custom_skills": {"type": "boolean"},
+          "api_access": {"type": "boolean"},
+          "rate_limit_rpm": {"type": "integer"},
+          "rate_limit_burst": {"type": "integer"},
+          "rate_limit_daily": {"type": "integer"}
+        }
+      },
+      "CheckoutRequest": {
+        "type": "object",
+        "required": ["plan_id", "success_url", "cancel_url"],
+        "properties": {
+          "plan_id": {"type": "string"},
+          "interval": {"type": "string", "enum": ["monthly", "yearly"], "default": "monthly"},
+          "success_url": {"type": "string", "format": "uri"},
+          "cancel_url": {"type": "string", "format": "uri"},
+          "trial_days": {"type": "integer"}
+        }
+      },
+      "SubscriptionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "user_id": {"type": "string"},
+          "plan_id": {"type": "string"},
+          "status": {"type": "string", "enum": ["active", "trialing", "past_due", "canceled", "expired", "paused"]},
+          "interval": {"type": "string", "enum": ["monthly", "yearly"]},
+          "current_period_start": {"type": "string", "format": "date-time"},
+          "current_period_end": {"type": "string", "format": "date-time"},
+          "cancel_at_period_end": {"type": "boolean"},
+          "plan": {"$ref": "#/components/schemas/Plan"}
+        }
+      },
+      "PlanChangeRequest": {
+        "type": "object",
+        "required": ["plan_id"],
+        "properties": {
+          "plan_id": {"type": "string"},
+          "interval": {"type": "string", "enum": ["monthly", "yearly"]},
+          "mode": {"type": "string", "enum": ["immediate", "at_period_end"]}
+        }
+      },
+      "PlanChangeResult": {
+        "type": "object",
+        "properties": {
+          "direction": {"type": "string", "enum": ["upgrade", "downgrade", "same"]},
+          "mode": {"type": "string", "enum": ["immediate", "at_period_end"]},
+          "previous_plan": {"type": "string"},
+          "new_plan": {"type": "string"},
+          "effective_at": {"type": "string", "format": "date-time"},
+          "subscription": {"$ref": "#/components/schemas/SubscriptionResponse"},
+          "proration_amount": {"type": "integer", "description": "Proration in cents (positive=charge, negative=credit)"}
+        }
+      },
+      "UsageSummary": {
+        "type": "object",
+        "properties": {
+          "total_input_tokens": {"type": "integer"},
+          "total_output_tokens": {"type": "integer"},
+          "total_tokens": {"type": "integer"},
+          "total_requests": {"type": "integer"},
+          "total_cost": {"type": "number", "format": "float"}
+        }
+      },
+      "DailyUsage": {
+        "type": "object",
+        "properties": {
+          "date": {"type": "string", "format": "date"},
+          "input_tokens": {"type": "integer"},
+          "output_tokens": {"type": "integer"},
+          "total_tokens": {"type": "integer"},
+          "requests": {"type": "integer"},
+          "cost": {"type": "number", "format": "float"}
+        }
+      },
+      "ModelUsage": {
+        "type": "object",
+        "properties": {
+          "model": {"type": "string"},
+          "input_tokens": {"type": "integer"},
+          "output_tokens": {"type": "integer"},
+          "total_tokens": {"type": "integer"},
+          "requests": {"type": "integer"},
+          "cost": {"type": "number", "format": "float"}
+        }
+      },
+      "UsageEvent": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "user_id": {"type": "string"},
+          "model": {"type": "string"},
+          "provider": {"type": "string"},
+          "input_tokens": {"type": "integer"},
+          "output_tokens": {"type": "integer"},
+          "total_tokens": {"type": "integer"},
+          "session_key": {"type": "string"},
+          "agent_id": {"type": "string"},
+          "duration_ms": {"type": "integer"},
+          "estimated_cost": {"type": "number", "format": "float"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "UsageLimits": {
+        "type": "object",
+        "properties": {
+          "plan_id": {"type": "string"},
+          "tokens": {
+            "type": "object",
+            "properties": {
+              "used": {"type": "integer"},
+              "limit": {"type": "integer"},
+              "unlimited": {"type": "boolean"}
+            }
+          },
+          "messages": {
+            "type": "object",
+            "properties": {
+              "used": {"type": "integer"},
+              "limit": {"type": "integer"},
+              "unlimited": {"type": "boolean"}
+            }
+          }
+        }
+      },
+      "OverageStatus": {
+        "type": "object",
+        "properties": {
+          "overall_level": {"type": "string", "enum": ["none", "warning", "soft_cap", "hard_cap", "blocked"]},
+          "overall_action": {"type": "string", "enum": ["none", "warn", "downgrade_model", "throttle", "block"]},
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "resource": {"type": "string"},
+                "level": {"type": "string"},
+                "action": {"type": "string"},
+                "message": {"type": "string"},
+                "usage": {"type": "integer"},
+                "limit": {"type": "integer"},
+                "percent": {"type": "number"}
+              }
+            }
+          }
+        }
+      },
+      "OAuthProvider": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "auth_url": {"type": "string", "format": "uri"},
+          "scopes": {"type": "array", "items": {"type": "string"}},
+          "use_pkce": {"type": "boolean"}
+        }
+      },
+      "OAuthTokenResponse": {
+        "type": "object",
+        "properties": {
+          "access_token": {"type": "string"},
+          "refresh_token": {"type": "string"},
+          "token_type": {"type": "string"},
+          "expires_in": {"type": "integer"},
+          "scope": {"type": "string"},
+          "id_token": {"type": "string"}
+        }
+      },
+      "IntegrationSummary": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "icon": {"type": "string"},
+          "category": {"type": "string"},
+          "description": {"type": "string"},
+          "auth_type": {"type": "string", "enum": ["oauth2", "api_key", "none"]},
+          "status": {"type": "string"},
+          "required_plan": {"type": "string"},
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {"type": "string"},
+                "description": {"type": "string"}
+              }
+            }
+          }
+        }
+      },
+      "UserIntegration": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "user_id": {"type": "string"},
+          "integration_id": {"type": "string"},
+          "status": {"type": "string", "enum": ["pending", "active", "failed", "revoked", "disabled"]},
+          "config": {"type": "object", "additionalProperties": {"type": "string"}},
+          "scopes": {"type": "array", "items": {"type": "string"}},
+          "error_message": {"type": "string"},
+          "last_used_at": {"type": "string", "format": "date-time"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "ConnectRequest": {
+        "type": "object",
+        "required": ["integration_id"],
+        "properties": {
+          "integration_id": {"type": "string"},
+          "config": {"type": "object", "additionalProperties": {"type": "string"}},
+          "scopes": {"type": "array", "items": {"type": "string"}},
+          "redirect_after": {"type": "string", "format": "uri"},
+          "api_key": {"type": "string"}
+        }
+      },
+      "ConnectResponse": {
+        "type": "object",
+        "properties": {
+          "integration_id": {"type": "string"},
+          "status": {"type": "string"},
+          "auth_url": {"type": "string", "format": "uri"},
+          "message": {"type": "string"}
+        }
+      },
+      "IntegrationStatus": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "integration_id": {"type": "string"},
+          "name": {"type": "string"},
+          "category": {"type": "string"},
+          "auth_type": {"type": "string"},
+          "status": {"type": "string"},
+          "token_status": {
+            "type": "object",
+            "properties": {
+              "has_access_token": {"type": "boolean"},
+              "has_refresh_token": {"type": "boolean"},
+              "expires_at": {"type": "string", "format": "date-time"},
+              "is_expired": {"type": "boolean"},
+              "needs_refresh": {"type": "boolean"},
+              "token_status": {"type": "string"}
+            }
+          },
+          "refresh_status": {
+            "type": "object",
+            "properties": {
+              "retry_count": {"type": "integer"},
+              "max_retries": {"type": "integer"},
+              "last_error": {"type": "string"},
+              "next_retry": {"type": "string", "format": "date-time"},
+              "exhausted": {"type": "boolean"}
+            }
+          }
+        }
+      },
+      "AdminUserResponse": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "email": {"type": "string", "format": "email"},
+          "display_name": {"type": "string"},
+          "role": {"type": "string", "enum": ["user", "admin"]},
+          "status": {"type": "string"},
+          "email_verified": {"type": "boolean"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "PlatformStats": {
+        "type": "object",
+        "properties": {
+          "total_users": {"type": "integer"},
+          "active_users": {"type": "integer"},
+          "pending_users": {"type": "integer"},
+          "suspended_users": {"type": "integer"}
+        }
+      },
+      "AuditEvent": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "user_id": {"type": "string"},
+          "actor_id": {"type": "string"},
+          "action": {"type": "string"},
+          "resource": {"type": "string"},
+          "resource_id": {"type": "string"},
+          "status": {"type": "string", "enum": ["success", "failure"]},
+          "detail": {"type": "object"},
+          "ip_address": {"type": "string"},
+          "user_agent": {"type": "string"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "DataSubjectRequest": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "user_id": {"type": "string"},
+          "type": {"type": "string", "enum": ["export", "erasure"]},
+          "status": {"type": "string", "enum": ["pending", "processing", "completed", "failed", "canceled"]},
+          "requested_by": {"type": "string"},
+          "result": {"type": "object"},
+          "error_message": {"type": "string"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "completed_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "RetentionPolicy": {
+        "type": "object",
+        "properties": {
+          "audit_logs_days": {"type": "integer"},
+          "usage_data_days": {"type": "integer"},
+          "session_data_days": {"type": "integer"},
+          "deleted_users_days": {"type": "integer"}
+        }
+      },
+      "RateLimitStatus": {
+        "type": "object",
+        "properties": {
+          "plan": {"type": "string"},
+          "per_minute": {
+            "type": "object",
+            "properties": {
+              "limit": {"type": "integer"},
+              "remaining": {"type": "integer"},
+              "burst": {"type": "integer"}
+            }
+          },
+          "daily": {
+            "type": "object",
+            "properties": {
+              "limit": {"type": "integer"},
+              "remaining": {"type": "integer"},
+              "resets_at": {"type": "string", "format": "date-time"}
+            }
+          }
+        }
+      },
+      "DetailedHealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string", "enum": ["healthy", "degraded", "unhealthy"]},
+          "uptime": {"type": "number", "description": "Uptime in seconds"},
+          "timestamp": {"type": "string", "format": "date-time"},
+          "components": {
+            "type": "object",
+            "additionalProperties": {"$ref": "#/components/schemas/ComponentHealth"}
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "total": {"type": "integer"},
+              "healthy": {"type": "integer"},
+              "degraded": {"type": "integer"},
+              "unhealthy": {"type": "integer"}
+            }
+          }
+        }
+      },
+      "ComponentHealth": {
+        "type": "object",
+        "properties": {
+          "status": {"type": "string", "enum": ["healthy", "degraded", "unhealthy"]},
+          "type": {"type": "string", "enum": ["database", "cache", "messaging", "external", "internal"]},
+          "critical": {"type": "boolean"},
+          "duration_ms": {"type": "number"},
+          "details": {"type": "object"}
+        }
+      }
+    }
+  }
+}

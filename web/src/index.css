@@ -1,0 +1,409 @@
+@import "tailwindcss";
+@import "./styles/hljs.css";
+
+/* ─── OKLCH Design Tokens ─── */
+/* Ported from legacy/index.html — the canonical visual identity */
+
+:root {
+  /* Spacing scale */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* Radii */
+  --radius: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+
+  /* Typography */
+  --font: 'DM Sans', -apple-system, system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+
+  /* Safe area insets (viewport-fit=cover in HTML) */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+
+  /* Bottom tabs height (icon 20 + text 10 + padding 16 ≈ 46) + safe area */
+  --bottom-tabs-h: calc(46px + var(--safe-b));
+}
+
+/* ─── Dark theme (default) ─── */
+.dark {
+  --bg: oklch(0.08 0 0);
+  --surface: oklch(0.13 0 0);
+  --surface-2: oklch(0.17 0 0);
+  --surface-3: oklch(0.21 0 0);
+  --border: oklch(0.22 0 0);
+  --border-subtle: oklch(0.18 0 0);
+  --text: oklch(0.92 0 0);
+  --text-secondary: oklch(0.65 0 0);
+  --text-dim: oklch(0.50 0 0);
+  --accent: oklch(0.58 0.14 260);
+  --accent-subtle: oklch(0.22 0.05 260);
+  --accent-text: oklch(0.75 0.12 260);
+  --success: oklch(0.65 0.18 145);
+  --success-subtle: oklch(0.20 0.05 145);
+  --warning: oklch(0.72 0.15 85);
+  --warning-subtle: oklch(0.20 0.05 85);
+  --error: oklch(0.62 0.20 25);
+  --error-subtle: oklch(0.20 0.05 25);
+  --tool-bg: oklch(0.13 0.015 260);
+  --tool-border: oklch(0.24 0.04 260);
+  --user-bg: oklch(0.18 0.04 260);
+  --user-border: oklch(0.26 0.05 260);
+  --glass-bg: oklch(0.14 0 0 / 0.85);
+  --glass-border: oklch(0.28 0 0 / 0.6);
+  --glass-inset: oklch(1 0 0 / 0.04);
+  --glass-shadow: oklch(0 0 0 / 0.4);
+  --scrollthumb: oklch(0.25 0 0);
+  --code-surface: oklch(0.13 0 0);
+}
+
+/* ─── Light theme ─── */
+.light {
+  --bg: oklch(0.97 0 0);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.95 0 0);
+  --surface-3: oklch(0.92 0 0);
+  --border: oklch(0.88 0 0);
+  --border-subtle: oklch(0.92 0 0);
+  --text: oklch(0.15 0 0);
+  --text-secondary: oklch(0.42 0 0);
+  --text-dim: oklch(0.58 0 0);
+  --accent: oklch(0.50 0.16 260);
+  --accent-subtle: oklch(0.92 0.04 260);
+  --accent-text: oklch(0.45 0.14 260);
+  --success: oklch(0.52 0.16 145);
+  --success-subtle: oklch(0.92 0.04 145);
+  --warning: oklch(0.55 0.14 85);
+  --warning-subtle: oklch(0.92 0.05 85);
+  --error: oklch(0.52 0.18 25);
+  --error-subtle: oklch(0.92 0.05 25);
+  --tool-bg: oklch(0.96 0.01 260);
+  --tool-border: oklch(0.88 0.03 260);
+  --user-bg: oklch(0.93 0.03 260);
+  --user-border: oklch(0.86 0.05 260);
+  --glass-bg: oklch(1 0 0 / 0.75);
+  --glass-border: oklch(0.82 0 0 / 0.6);
+  --glass-inset: oklch(1 0 0 / 0.5);
+  --glass-shadow: oklch(0 0 0 / 0.08);
+  --scrollthumb: oklch(0.82 0 0);
+  --code-surface: oklch(0.96 0 0);
+}
+
+/* ─── Tailwind v4 theme extension ─── */
+@theme {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-dim: var(--text-dim);
+  --color-accent: var(--accent);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-text: var(--accent-text);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-error: var(--error);
+  --color-error-subtle: var(--error-subtle);
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-border: var(--glass-border);
+  --color-glass-shadow: var(--glass-shadow);
+  --color-user-bg: var(--user-bg);
+  --color-user-border: var(--user-border);
+  --color-tool-bg: var(--tool-bg);
+  --color-tool-border: var(--tool-border);
+  --color-code-surface: var(--code-surface);
+  --color-scrollthumb: var(--scrollthumb);
+
+  --font-family-sans: var(--font);
+  --font-family-mono: var(--mono);
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius);
+
+  /* Z-index scale for layered UI */
+  --z-nav: 80;
+  --z-backdrop: 90;
+  --z-overlay: 100;
+}
+
+/* ─── Base resets ─── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  height: 100dvh; /* Use dynamic viewport height for iOS Safari */
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent; /* Remove blue highlight on tap */
+  overscroll-behavior: none; /* Prevent pull-to-refresh and rubber-banding */
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ─── iOS input zoom prevention ─── */
+/* iOS Safari zooms if font-size < 16px on focus */
+@supports (-webkit-touch-callout: none) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* ─── Mobile utilities ─── */
+/* Content area must clear the fixed bottom tabs on mobile */
+.mobile-safe-bottom {
+  padding-bottom: var(--bottom-tabs-h);
+}
+
+@media (min-width: 768px) {
+  .mobile-safe-bottom {
+    padding-bottom: 0;
+  }
+}
+
+/* Smooth momentum scrolling for touch */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Hide scrollbar but keep scroll (mobile panels) */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Scrollbar styling ─── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollthumb); border-radius: 2px; }
+
+/* ─── Glass morphism utilities ─── */
+/* Reusable glass treatment matching the legacy floating nav / input */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 24px var(--glass-shadow), 0 0 0 0.5px var(--glass-inset) inset;
+  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+
+.glass-subtle {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 2px 12px var(--glass-shadow);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+/* ─── Form base styles ─── */
+/* Inputs, selects, textareas all inherit the token system */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="url"],
+input[type="number"],
+textarea,
+select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-3);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.3s ease;
+  -webkit-appearance: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px oklch(from var(--accent) l c h / 0.15);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-dim);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Focus ring utility ─── */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─── Screen reader only utility ─── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Override sr-only when focused (for skip links) */
+.sr-only:focus,
+.sr-only:focus-within {
+  /* Allow un-hiding on focus via Tailwind's not-sr-only or explicit override */
+}
+
+/* ─── High contrast mode support ─── */
+@media (forced-colors: active) {
+  .glass,
+  .glass-subtle {
+    border: 2px solid ButtonText;
+  }
+
+  button,
+  [role="button"] {
+    border: 1px solid ButtonText;
+  }
+}
+
+/* ─── Focus visible for all interactive elements ─── */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─── Animations ─── */
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0.5); opacity: 0.3; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 6px oklch(0.65 0.18 145 / 0.5); }
+  50% { box-shadow: 0 0 12px oklch(0.65 0.18 145 / 0.8); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-blink { animation: blink 0.8s ease-in-out infinite; }
+
+.animate-fade-slide { animation: fadeSlide 0.25s ease; }
+.animate-fade-slide-down { animation: fadeSlideDown 0.25s ease; }
+.animate-fade-in { animation: fadeIn 0.2s ease; }
+.animate-scale-in { animation: scaleIn 0.2s ease; }
+.animate-slide-left { animation: slideInLeft 0.25s ease; }
+.animate-slide-right { animation: slideInRight 0.25s ease; }
+
+/* ─── Theme transition ─── */
+/* Smoothly transition all token-driven properties on theme switch */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-timing-function: ease;
+  transition-duration: 0s;
+}
+
+/* Enable transitions only during theme change (JS sets this class) */
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition-duration: 0.3s !important;
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: oklch(from var(--accent) l c h / 0.3);
+  color: var(--text);
+}

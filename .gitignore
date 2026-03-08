@@ -48,3 +48,5 @@ dist/
 # Windows Application Icon/Resource
 *.syso
 operator-go
+web/node_modules/
+web/dist/

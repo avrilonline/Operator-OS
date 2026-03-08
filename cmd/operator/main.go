@@ -1,5 +1,5 @@
 // Operator - Ultra-lightweight personal AI agent
-// Inspired by and based on nanobot: https://github.com/HKUDS/nanobot
+// Operator OS — github.com/operatoronline/Operator-OS
 // License: MIT
 //
 // Copyright (c) 2026 Operator contributors
@@ -24,7 +24,7 @@ import (
 	"github.com/operatoronline/Operator-OS/cmd/operator/internal/version"
 )
 
-func NewPicoclawCommand() *cobra.Command {
+func NewOperatorCommand() *cobra.Command {
 	short := fmt.Sprintf("%s operator - Personal AI Assistant v%s\n\n", internal.Logo, internal.GetVersion())
 
 	cmd := &cobra.Command{
@@ -63,7 +63,7 @@ const (
 
 func main() {
 	fmt.Printf("%s", banner)
-	cmd := NewPicoclawCommand()
+	cmd := NewOperatorCommand()
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
 	}

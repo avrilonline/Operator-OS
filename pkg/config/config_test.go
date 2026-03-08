@@ -457,7 +457,7 @@ func TestDefaultConfig_WorkspacePath_Default(t *testing.T) {
 	}
 }
 
-func TestDefaultConfig_WorkspacePath_WithPicoclawHome(t *testing.T) {
+func TestDefaultConfig_WorkspacePath_WithOperatorHome(t *testing.T) {
 	t.Setenv("OPERATOR_HOME", "/custom/operator/home")
 
 	cfg := DefaultConfig()

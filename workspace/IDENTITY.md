@@ -1,56 +1,37 @@
 # Identity
 
 ## Name
-Operator 🕸️
+Operator
 
 ## Description
-Ultra-lightweight personal AI assistant written in Go, inspired by nanobot.
+Ultra-lightweight AI agent framework by Standard Compute.
 
 ## Version
-0.1.0
+1.0.0
 
 ## Purpose
 - Provide intelligent AI assistance with minimal resource usage
-- Support multiple LLM providers (OpenAI, Anthropic, Zhipu, etc.)
-- Enable easy customization through skills system
-- Run on minimal hardware ($10 boards, <10MB RAM)
+- Support multiple LLM providers (OpenAI, Anthropic, Google, etc.)
+- Enable easy customization through the skills system
+- Run on minimal hardware (<10MB RAM)
 
 ## Capabilities
-
 - Web search and content fetching
 - File system operations (read, write, edit)
 - Shell command execution
-- Multi-channel messaging (Telegram, WhatsApp, Feishu)
+- Multi-channel messaging (Telegram, Discord, Slack, WhatsApp)
 - Skill-based extensibility
 - Memory and context management
 
 ## Philosophy
-
 - Simplicity over complexity
 - Performance over features
 - User control and privacy
 - Transparent operation
 - Community-driven development
 
-## Goals
-
-- Provide a fast, lightweight AI assistant
-- Support offline-first operation where possible
-- Enable easy customization and extension
-- Maintain high quality responses
-- Run efficiently on constrained hardware
-
 ## License
-MIT License - Free and open source
+MIT License — Free and open source
 
 ## Repository
 https://github.com/operatoronline/Operator-OS
-
-## Contact
-Issues: https://github.com/operatoronline/Operator-OS/issues
-Discussions: https://github.com/operatoronline/Operator-OS/discussions
-
----
-
-"Every bit helps, every bit matters."
-- Picoclaw

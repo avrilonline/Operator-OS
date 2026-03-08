@@ -1,5 +1,5 @@
 // Operator - Ultra-lightweight personal AI agent
-// Inspired by and based on nanobot: https://github.com/HKUDS/nanobot
+// Operator OS — github.com/operatoronline/Operator-OS
 // License: MIT
 //
 // Copyright (c) 2026 Operator contributors

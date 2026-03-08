@@ -1,0 +1,33 @@
+# Operator OS — Documentation
+
+## Setup & Configuration
+- [Configuration Example](../config/config.example.json) — Sample config file
+- [Tools Configuration](tools_configuration.md) — Configure built-in tools
+- [Troubleshooting](troubleshooting.md) — Common issues and fixes
+- [Environment Variables](../.env.example) — Required env vars
+
+## Channels
+Setup guides for each messaging channel:
+- [Telegram](channels/telegram/README.md)
+- [Discord](channels/discord/README.md)
+- [Slack](channels/slack/README.md)
+- [WhatsApp](channels/wecom/README.md)
+- [DingTalk](channels/dingtalk/README.md)
+- [Feishu / Lark](channels/feishu/README.md)
+- [LINE](channels/line/README.md)
+- [QQ](channels/qq/README.md)
+- [OneBot](channels/onebot/README.md)
+- [WeCom](channels/wecom/README.md) — [App](channels/wecom/wecom_app/README.md) · [Bot](channels/wecom/wecom_bot/README.md) · [AI Bot](channels/wecom/wecom_aibot/README.md)
+- [MaixCAM](channels/maixcam/README.md)
+
+## Providers
+- [Antigravity (Google Cloud Code Assist)](providers/ANTIGRAVITY_AUTH.md) — Auth & setup
+- [Antigravity Usage Guide](providers/ANTIGRAVITY_USAGE.md)
+
+## Deployment
+- [Docker Compose](../docker/) — Container deployment
+- [Helm Chart](../deploy/helm/) — Kubernetes deployment
+- [GoReleaser](../.goreleaser.yaml) — Release builds
+
+## Architecture
+See the main [README](../README.md) for architecture overview, supported hardware, and quick start.

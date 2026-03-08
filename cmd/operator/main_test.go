@@ -11,8 +11,8 @@ import (
 	"github.com/operatoronline/Operator-OS/cmd/operator/internal"
 )
 
-func TestNewPicoclawCommand(t *testing.T) {
-	cmd := NewPicoclawCommand()
+func TestNewOperatorCommand(t *testing.T) {
+	cmd := NewOperatorCommand()
 
 	require.NotNil(t, cmd)
 

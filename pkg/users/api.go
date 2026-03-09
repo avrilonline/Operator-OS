@@ -424,3 +424,132 @@ func writeError(w http.ResponseWriter, status int, code, message string) {
 		Code:  code,
 	})
 }
+
+func jsonResponse(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(v)
+}
+
+// ── User Profile Endpoints ──
+
+// RegisterProfileRoutes registers authenticated user profile endpoints.
+func (a *API) RegisterProfileRoutes(mux *http.ServeMux, authMiddleware func(http.Handler) http.Handler) {
+	wrap := func(h http.HandlerFunc) http.Handler { return authMiddleware(h) }
+	mux.Handle("GET /api/v1/user/profile", wrap(a.handleGetProfile))
+	mux.Handle("PUT /api/v1/user/profile", wrap(a.handleUpdateProfile))
+	mux.Handle("POST /api/v1/user/change-password", wrap(a.handleChangePassword))
+	mux.Handle("GET /api/v1/user/notifications", wrap(a.handleGetNotifications))
+	mux.Handle("PUT /api/v1/user/notifications", wrap(a.handleUpdateNotifications))
+	mux.Handle("GET /api/v1/user/api-keys", wrap(a.handleListAPIKeys))
+	mux.Handle("POST /api/v1/user/api-keys", wrap(a.handleCreateAPIKey))
+	mux.Handle("DELETE /api/v1/user/api-keys/{id}", wrap(a.handleDeleteAPIKey))
+}
+
+func (a *API) handleGetProfile(w http.ResponseWriter, r *http.Request) {
+	claims := ClaimsFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "Missing auth")
+		return
+	}
+	user, err := a.store.GetByID(claims.UserID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", "User not found")
+		return
+	}
+	jsonResponse(w, http.StatusOK, map[string]any{
+		"id":             user.ID,
+		"email":          user.Email,
+		"display_name":   user.DisplayName,
+		"role":           user.Role,
+		"email_verified": user.EmailVerified,
+		"created_at":     user.CreatedAt,
+	})
+}
+
+func (a *API) handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
+	claims := ClaimsFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "Missing auth")
+		return
+	}
+	var req struct {
+		DisplayName string `json:"display_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "Invalid JSON")
+		return
+	}
+	user, err := a.store.GetByID(claims.UserID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", "User not found")
+		return
+	}
+	user.DisplayName = req.DisplayName
+	if err := a.store.Update(user); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", "Failed to update profile")
+		return
+	}
+	jsonResponse(w, http.StatusOK, map[string]any{"status": "ok"})
+}
+
+func (a *API) handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	claims := ClaimsFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "Missing auth")
+		return
+	}
+	var req struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "Invalid JSON")
+		return
+	}
+	user, err := a.store.GetByID(claims.UserID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", "User not found")
+		return
+	}
+	if CheckPassword(user.PasswordHash, req.CurrentPassword) != nil {
+		writeError(w, http.StatusUnauthorized, "invalid_password", "Current password is incorrect")
+		return
+	}
+	hash, err := HashPassword(req.NewPassword)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", "Failed to hash password")
+		return
+	}
+	user.PasswordHash = hash
+	if err := a.store.Update(user); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal", "Failed to update password")
+		return
+	}
+	jsonResponse(w, http.StatusOK, map[string]any{"status": "ok"})
+}
+
+// Stub endpoints — notifications and API keys
+func (a *API) handleGetNotifications(w http.ResponseWriter, _ *http.Request) {
+	jsonResponse(w, http.StatusOK, map[string]any{
+		"email_notifications": true,
+		"push_notifications":  false,
+		"weekly_digest":       false,
+	})
+}
+
+func (a *API) handleUpdateNotifications(w http.ResponseWriter, _ *http.Request) {
+	jsonResponse(w, http.StatusOK, map[string]any{"status": "ok"})
+}
+
+func (a *API) handleListAPIKeys(w http.ResponseWriter, _ *http.Request) {
+	jsonResponse(w, http.StatusOK, []any{})
+}
+
+func (a *API) handleCreateAPIKey(w http.ResponseWriter, _ *http.Request) {
+	jsonResponse(w, http.StatusOK, map[string]any{"id": "stub", "key": "op-stub-not-implemented"})
+}
+
+func (a *API) handleDeleteAPIKey(w http.ResponseWriter, _ *http.Request) {
+	jsonResponse(w, http.StatusOK, map[string]any{"status": "ok"})
+}

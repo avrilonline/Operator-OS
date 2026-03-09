@@ -2,8 +2,10 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -16,7 +18,9 @@ import (
 	"github.com/operatoronline/Operator-OS/cmd/operator/internal"
 	"github.com/operatoronline/Operator-OS/pkg/admin"
 	"github.com/operatoronline/Operator-OS/pkg/agent"
+	"github.com/operatoronline/Operator-OS/pkg/agents"
 	"github.com/operatoronline/Operator-OS/pkg/audit"
+	"github.com/operatoronline/Operator-OS/pkg/billing"
 	"github.com/operatoronline/Operator-OS/pkg/bus"
 	"github.com/operatoronline/Operator-OS/pkg/channels"
 	_ "github.com/operatoronline/Operator-OS/pkg/channels/dingtalk"
@@ -41,6 +45,8 @@ import (
 	"github.com/operatoronline/Operator-OS/pkg/media"
 	"github.com/operatoronline/Operator-OS/pkg/metrics"
 	"github.com/operatoronline/Operator-OS/pkg/providers"
+	"github.com/operatoronline/Operator-OS/pkg/ratelimit"
+	"github.com/operatoronline/Operator-OS/pkg/secaudit"
 	"github.com/operatoronline/Operator-OS/pkg/state"
 	"github.com/operatoronline/Operator-OS/pkg/tools"
 	"github.com/operatoronline/Operator-OS/pkg/users"
@@ -220,12 +226,50 @@ func gatewayCmd(debug bool) error {
 
 	adminAPI := admin.NewAPI(userStore, auditStore)
 
+	// ── Agents API ──
+	agentStore, err := agents.NewSQLiteUserAgentStore(dbPath)
+	if err != nil {
+		return fmt.Errorf("init agent store: %w", err)
+	}
+	agentAPI := agents.NewAPI(agentStore)
+
+	// ── Audit API ──
+	auditAPI := audit.NewAPI(auditStore)
+
+	// ── Billing APIs (stub stores for now — no Stripe configured) ──
+	catalogue := billing.NewCatalogue(billing.DefaultPlans())
+	billingPlanAPI := billing.NewAPI(catalogue, &stubSubStore{})
+	billingUsageAPI := billing.NewUsageAPI(&stubUsageStore{}, &stubSubStore{}, catalogue)
+
+	// ── Rate Limiter ──
+	limiter := ratelimit.NewLimiter(nil) // nil → uses DefaultTierConfigs()
+
+	// ── Security Audit ──
+	secAuditor := secaudit.NewAuditor()
+
 	// Register routes on the shared mux
 	apiMux := channelManager.Mux()
 	if apiMux != nil {
+		// Auth
 		userAPI.RegisterRoutes(apiMux)
+		userAPI.RegisterProfileRoutes(apiMux, authMiddleware)
+		// Admin
 		adminAPI.RegisterRoutes(apiMux, authMiddleware, adminMiddleware)
-		fmt.Println("✓ User management & admin APIs registered")
+		// Agents
+		agentAPI.RegisterRoutes(apiMux, authMiddleware)
+		// Audit
+		auditAPI.RegisterRoutes(apiMux)
+		// Billing
+		billingPlanAPI.RegisterRoutes(apiMux)
+		billingUsageAPI.RegisterRoutes(apiMux)
+		// Rate limit
+		ratelimit.RegisterRoutes(apiMux, limiter)
+		// Security audit
+		secaudit.RegisterRoutes(apiMux, secAuditor)
+		// Sessions stub
+		registerSessionStubs(apiMux, authMiddleware)
+
+		fmt.Println("✓ All API routes registered (auth, profile, agents, billing, audit, sessions)")
 	}
 
 	if err := channelManager.StartAll(ctx); err != nil {
@@ -295,4 +339,93 @@ func setupCronTool(
 	})
 
 	return cronService
+}
+
+// ── Stub implementations for billing stores (no Stripe configured yet) ──
+
+type stubSubStore struct{}
+
+func (s *stubSubStore) Create(_ *billing.Subscription) error { return nil }
+func (s *stubSubStore) GetByID(_ string) (*billing.Subscription, error) {
+	return &billing.Subscription{Status: billing.SubStatusActive, PlanID: billing.PlanFree}, nil
+}
+func (s *stubSubStore) GetByUserID(_ string) (*billing.Subscription, error) {
+	return &billing.Subscription{Status: billing.SubStatusActive, PlanID: billing.PlanFree}, nil
+}
+func (s *stubSubStore) Update(_ *billing.Subscription) error                              { return nil }
+func (s *stubSubStore) ListByStatus(_ billing.SubscriptionStatus) ([]*billing.Subscription, error) { return nil, nil }
+func (s *stubSubStore) Close() error                                                       { return nil }
+
+type stubUsageStore struct{}
+
+func (s *stubUsageStore) Record(_ *billing.UsageEvent) error { return nil }
+func (s *stubUsageStore) GetSummary(_ string, _, _ time.Time) (*billing.UsageSummary, error) {
+	return &billing.UsageSummary{}, nil
+}
+func (s *stubUsageStore) GetByModel(_ string, _, _ time.Time) ([]*billing.ModelUsage, error) {
+	return nil, nil
+}
+func (s *stubUsageStore) GetDaily(_ string, _, _ time.Time) ([]*billing.DailyUsage, error) {
+	return nil, nil
+}
+func (s *stubUsageStore) GetCurrentPeriodUsage(_ string, _ time.Time) (int64, error)    { return 0, nil }
+func (s *stubUsageStore) GetCurrentPeriodMessages(_ string, _ time.Time) (int64, error) { return 0, nil }
+func (s *stubUsageStore) ListEvents(_ billing.UsageQuery) ([]*billing.UsageEvent, error) { return nil, nil }
+func (s *stubUsageStore) DeleteBefore(_ time.Time) (int64, error)                        { return 0, nil }
+func (s *stubUsageStore) Close() error                                                    { return nil }
+
+// ── Session stubs (chat sessions — not yet backed by real store) ──
+
+func registerSessionStubs(mux *http.ServeMux, authMiddleware func(http.Handler) http.Handler) {
+	wrap := func(h http.HandlerFunc) http.Handler { return authMiddleware(h) }
+	mux.Handle("GET /api/v1/sessions", wrap(handleListSessions))
+	mux.Handle("POST /api/v1/sessions", wrap(handleCreateSession))
+	mux.Handle("GET /api/v1/sessions/{id}", wrap(handleGetSession))
+	mux.Handle("PUT /api/v1/sessions/{id}", wrap(handleUpdateSession))
+	mux.Handle("DELETE /api/v1/sessions/{id}", wrap(handleDeleteSession))
+	mux.Handle("GET /api/v1/sessions/{id}/messages", wrap(handleGetMessages))
+}
+
+func jsonResp(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(v)
+}
+
+func handleListSessions(w http.ResponseWriter, _ *http.Request) {
+	jsonResp(w, http.StatusOK, []any{})
+}
+
+func handleCreateSession(w http.ResponseWriter, _ *http.Request) {
+	jsonResp(w, http.StatusCreated, map[string]any{
+		"id":         "session-1",
+		"title":      "New conversation",
+		"created_at": time.Now(),
+	})
+}
+
+func handleGetSession(w http.ResponseWriter, r *http.Request) {
+	jsonResp(w, http.StatusOK, map[string]any{
+		"id":         r.PathValue("id"),
+		"title":      "Conversation",
+		"created_at": time.Now(),
+	})
+}
+
+func handleUpdateSession(w http.ResponseWriter, _ *http.Request) {
+	jsonResp(w, http.StatusOK, map[string]any{"status": "ok"})
+}
+
+func handleDeleteSession(w http.ResponseWriter, _ *http.Request) {
+	jsonResp(w, http.StatusOK, map[string]any{"status": "ok"})
+}
+
+func handleGetMessages(w http.ResponseWriter, _ *http.Request) {
+	jsonResp(w, http.StatusOK, map[string]any{
+		"messages":   []any{},
+		"total":      0,
+		"page":       1,
+		"per_page":   50,
+		"has_more":   false,
+	})
 }

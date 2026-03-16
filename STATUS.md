@@ -4,7 +4,7 @@
 **Phase 1: Foundation & Public Release Readiness**
 
 ## Last Updated
-2026-03-16 by claude/review-status-continue-bFgCX
+2026-03-16 by claude/review-status-continue-5Vngg
 
 ---
 
@@ -170,22 +170,22 @@
 ## Phase 3 — Documentation & Public Release
 
 ### Documentation
-- [ ] README.md — review and update for current feature set
-- [ ] Quick Start guide (binary, Docker, build-from-source)
-- [ ] Configuration reference (all config.json keys documented)
+- [x] README.md — review and update for current feature set
+- [x] Quick Start guide (binary, Docker, build-from-source)
+- [x] Configuration reference (all config.json keys documented)
 - [ ] API reference (generated from OpenAPI spec)
-- [ ] Channel setup guides (Slack, Discord, Telegram, WhatsApp)
+- [x] Channel setup guides (Slack, Discord, Telegram, WhatsApp)
 - [ ] Provider setup guides (OpenAI, Anthropic, Gemini, Ollama)
-- [ ] Self-hosting guide (Docker, Kubernetes/Helm, bare metal)
-- [ ] Contributing guide (code style, PR process, testing requirements)
-- [ ] Security policy (responsible disclosure, supported versions)
+- [x] Self-hosting guide (Docker, Kubernetes/Helm, bare metal)
+- [x] Contributing guide (code style, PR process, testing requirements)
+- [x] Security policy (responsible disclosure, supported versions)
 - [ ] Changelog / release notes template
 
 ### Branding & Assets
 - [ ] Verify logo renders correctly at all sizes (favicon, navbar, README)
 - [ ] Open Graph / social preview image
 - [ ] Remove any placeholder branding or starter-kit artifacts
-- [ ] Consistent naming: "Operator OS" everywhere (no "Operator-LIVE" in user-facing text)
+- [x] Consistent naming: "Operator OS" everywhere (no "Operator-LIVE" in user-facing text)
 
 ### Release Checklist
 - [ ] All Go tests pass (`make test`)
@@ -201,7 +201,7 @@
 ---
 
 ## Blocked
-_None currently_
+- **Go 1.25.7 toolchain**: Environment has Go 1.24.7; multiple dependencies (telego, whatsmeow) require Go 1.25+. Backend compilation and testing are blocked until the toolchain is updated.
 
 ---
 
@@ -345,3 +345,17 @@ _None currently_
 - Verified typecheck, lint, and production build all pass cleanly
 **Notes**: Go 1.25.7 download still fails (network timeout). Remaining Phase 2: safe-area-inset testing (manual), screen reader testing (manual), Lighthouse audit (manual). Next: Phase 1 backend hardening or Phase 3 documentation.
 **Branch**: `claude/review-status-continue-bFgCX`
+
+### Session: 2026-03-16 (continued)
+**Focus**: Phase 3 documentation — README update, configuration reference, self-hosting guide, contributing guide, security policy
+**Completed**:
+- Updated README.md — Go version badge (1.21→1.25), React badge, web dashboard section, documentation links, contributing/security references
+- Created `docs/configuration.md` — comprehensive config reference covering all `config.json` keys (agents, model_list, channels, tools, gateway, heartbeat, devices) and environment variables
+- Created `docs/self-hosting.md` — deployment guide for bare metal (systemd), Docker Compose (minimal/full/managed), Kubernetes Helm, PostgreSQL, reverse proxy (nginx/Caddy), hardware requirements
+- Created `CONTRIBUTING.md` — development setup, conventional commits, Go/frontend code conventions, design system rules, testing requirements, PR process
+- Created `SECURITY.md` — supported versions, responsible disclosure process, security model (sandbox, auth, data protection, network), self-hosting best practices
+- Updated `docs/README.md` — added links to new configuration reference, self-hosting guide, contributing guide, security policy
+- Verified branding consistency — "Operator OS" used everywhere in user-facing text
+- Updated STATUS.md — checked off completed Phase 3 items, added Go toolchain blocker
+**Notes**: Phase 3 documentation is substantially complete. Remaining: API reference (requires Go build for OpenAPI spec generation), provider setup guides, changelog template, branding asset verification. Phase 1 backend still blocked on Go 1.25.7 toolchain.
+**Branch**: `claude/review-status-continue-5Vngg`

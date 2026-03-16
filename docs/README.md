@@ -1,8 +1,10 @@
 # Operator OS — Documentation
 
 ## Setup & Configuration
+- [Configuration Reference](configuration.md) — All config keys documented
 - [Configuration Example](../config/config.example.json) — Sample config file
 - [Tools Configuration](tools_configuration.md) — Configure built-in tools
+- [Self-Hosting Guide](self-hosting.md) — Docker, Kubernetes, and bare metal deployment
 - [Troubleshooting](troubleshooting.md) — Common issues and fixes
 - [Environment Variables](../.env.example) — Required env vars
 
@@ -28,6 +30,10 @@ Setup guides for each messaging channel:
 - [Docker Compose](../docker/) — Container deployment
 - [Helm Chart](../deploy/helm/) — Kubernetes deployment
 - [GoReleaser](../.goreleaser.yaml) — Release builds
+
+## Contributing & Security
+- [Contributing Guide](../CONTRIBUTING.md) — Code style, PR process, testing
+- [Security Policy](../SECURITY.md) — Responsible disclosure, security model
 
 ## Architecture
 See the main [README](../README.md) for architecture overview, supported hardware, and quick start.

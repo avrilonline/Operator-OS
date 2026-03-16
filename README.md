@@ -8,7 +8,8 @@
   <p><strong>The Ultra-Lightweight AI Agent Framework for Constrained Environments</strong></p>
 
   <p>
-    <img src="https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go&logoColor=white" alt="Go">
+    <img src="https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat&logo=go&logoColor=white" alt="Go">
+    <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=white" alt="React">
     <img src="https://img.shields.io/badge/Architecture-x86__64%20%7C%20ARM64%20%7C%20RISC--V-blue" alt="Architecture">
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
     <br>
@@ -45,7 +46,7 @@ Built from the ground up to support autonomous agents, persistent memory, and mu
 Download the appropriate binary for your system from our [Releases](https://github.com/operatoronline/Operator-OS/releases) page.
 
 ### Build from Source
-Requires Go 1.21+.
+Requires Go 1.25+.
 
 ```bash
 git clone https://github.com/operatoronline/Operator-OS.git
@@ -119,7 +120,29 @@ Operator supports a zero-code model configuration system. Simply prefix the mode
 | **OpenAI** | `openai/` | `openai/gpt-5.2` |
 | **Google Gemini** | `gemini/` | `gemini/gemini-3.1-pro` |
 | **Groq** | `groq/` | `groq/llama3-8b-8192` |
+| **DeepSeek** | `deepseek/` | `deepseek/deepseek-chat` |
 | **Ollama (Local)** | `ollama/` | `ollama/llama3` |
+
+## 🖥️ Web Dashboard
+
+Operator OS includes a full-featured web dashboard built with React 19, TypeScript, and Tailwind CSS v4.
+
+```bash
+cd web && npm install && npm run dev
+# Open http://localhost:5173
+```
+
+Features include:
+- **Chat interface** with streaming, markdown rendering, and file attachments
+- **Agent management** with creation wizard and real-time status
+- **Session management** with search, filters, pin, archive, and export
+- **Usage analytics** with daily charts, model breakdown, and overage warnings
+- **Billing management** with plan comparison and subscription controls
+- **Admin panel** with user management, audit logs, and security dashboard
+- **Integration hub** for connecting third-party services via OAuth or API keys
+- **Settings** for profile, theme, API keys, notifications, and GDPR controls
+
+The dashboard is mobile-first, accessible (WCAG 2.1 AA), and supports dark/light themes with OKLCH color tokens.
 
 ## 🛡️ Security & Sandboxing
 
@@ -158,11 +181,21 @@ vim docker/data/config.json
 docker compose -f docker/docker-compose.yml --profile gateway up -d
 ```
 
+## 📖 Documentation
+
+- [Configuration Reference](docs/configuration.md) — All config keys documented
+- [Self-Hosting Guide](docs/self-hosting.md) — Docker, Kubernetes, and bare metal
+- [Tools Configuration](docs/tools_configuration.md) — Built-in tools setup
+- [Channel Setup Guides](docs/) — Telegram, Discord, Slack, WhatsApp, and more
+- [Troubleshooting](docs/troubleshooting.md) — Common issues and fixes
+
 ## 🤝 Contributing
 
-We welcome pull requests and issues! As Operator OS expands, we are looking for community maintainers to help build new skills, channel integrations, and deployment guides for edge hardware.
+We welcome pull requests and issues! See the [Contributing Guide](CONTRIBUTING.md) for code style, PR process, and testing requirements.
 
-See the [Roadmap](docs/ROADMAP.md) for our current trajectory.
+## 🔒 Security
+
+See [SECURITY.md](SECURITY.md) for our security policy and responsible disclosure process.
 
 ## 📄 License
 

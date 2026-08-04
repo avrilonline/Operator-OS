@@ -105,52 +105,6 @@
 }
 
 /* ─── Tailwind v4 theme extension ─── */
-@theme {
-  --color-bg: var(--bg);
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
-  --color-surface-3: var(--surface-3);
-  --color-border: var(--border);
-  --color-border-subtle: var(--border-subtle);
-  --color-text: var(--text);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-dim: var(--text-dim);
-  --color-accent: var(--accent);
-  --color-accent-subtle: var(--accent-subtle);
-  --color-accent-text: var(--accent-text);
-  --color-success: var(--success);
-  --color-success-subtle: var(--success-subtle);
-  --color-warning: var(--warning);
-  --color-warning-subtle: var(--warning-subtle);
-  --color-error: var(--error);
-  --color-error-subtle: var(--error-subtle);
-  --color-info: var(--info);
-  --color-info-subtle: var(--info-subtle);
-  --color-overlay-bg: var(--overlay-bg);
-  --color-glass-bg: var(--glass-bg);
-  --color-glass-border: var(--glass-border);
-  --color-glass-shadow: var(--glass-shadow);
-  --color-user-bg: var(--user-bg);
-  --color-user-border: var(--user-border);
-  --color-tool-bg: var(--tool-bg);
-  --color-tool-border: var(--tool-border);
-  --color-code-surface: var(--code-surface);
-  --color-scrollthumb: var(--scrollthumb);
-
-  --font-family-sans: var(--font);
-  --font-family-mono: var(--mono);
-
-  --radius-xs: var(--radius-xs);
-  --radius-sm: var(--radius-sm);
-  --radius-md: var(--radius-md);
-  --radius-lg: var(--radius);
-
-  /* Z-index scale for layered UI */
-  --z-nav: 80;
-  --z-backdrop: 90;
-  --z-overlay: 100;
-}
-
 /* ─── Base resets ─── */
 * {
   margin: 0;

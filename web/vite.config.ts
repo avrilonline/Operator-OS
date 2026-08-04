@@ -25,10 +25,11 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ["op-test.avril.onl", "localhost"],
     proxy: {
-      '/api': 'http://localhost:18795',
+      '/api': 'http://gateway:18790',
       '/ws': {
-        target: 'ws://localhost:18795',
+        target: 'ws://gateway:18790',
         ws: true,
       },
     },
